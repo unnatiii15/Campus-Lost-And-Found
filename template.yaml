@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Campus Lost-and-Found Portal PBL backend scaffold
+Parameters:
+  CorsOrigin:
+    Type: String
+    Default: http://localhost:8000
+    Description: Set exact frontend origin before use; no wildcard for public deployment.
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 15
+    MemorySize: 256
+    Tracing: Active
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref ItemsTable
+        BUCKET_NAME: !Ref ItemImagesBucket
+        CORS_ORIGIN: !Ref CorsOrigin
+Resources:
+  ItemsApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+      CorsConfiguration:
+        AllowOrigins: [!Ref CorsOrigin]
+        AllowHeaders: [content-type, authorization]
+        AllowMethods: [GET, POST, PATCH, OPTIONS]
+        MaxAge: 300
+  ItemsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: handler.handler
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref ItemsTable}
+        - S3WritePolicy: {BucketName: !Ref ItemImagesBucket}
+      Events:
+        ListItems: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /items, Method: GET}}
+        CreateItem: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /items, Method: POST}}
+        GetItem: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /items/{item_id}, Method: GET}}
+        UpdateItem: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /items/{item_id}, Method: PATCH}}
+        PresignUpload: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /uploads/presign, Method: POST}}
+  ItemsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: item_id, AttributeType: S}]
+      KeySchema: [{AttributeName: item_id, KeyType: HASH}]
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      SSESpecification: {SSEEnabled: true}
+      Tags: [{Key: Project, Value: CampusLostFoundPBL}]
+  ItemImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration: {Status: Enabled}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 7}
+      Tags: [{Key: Project, Value: CampusLostFoundPBL}]
+  ItemsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ItemsFunction}
+      RetentionInDays: 14
+Outputs:
+  ApiUrl:
+    Description: Do not expose publicly until Cognito/JWT authorization is added.
+    Value: !Sub https://${ItemsApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod
+  ItemsTableName: {Value: !Ref ItemsTable}
+  ItemImagesBucketName: {Value: !Ref ItemImagesBucket}
