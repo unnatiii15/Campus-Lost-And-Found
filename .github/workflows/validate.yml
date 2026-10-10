@@ -1,1 +1,22 @@
-
+name: Validate PBL
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile backend
+        run: python -m py_compile backend/handler.py
+      - name: Validate SAM YAML syntax
+        run: |
+          python -m pip install pyyaml
+          python - <<'PY'
+          import yaml
+          with open("template.yaml", encoding="utf-8") as f: data=yaml.safe_load(f)
+          assert data["Transform"] == "AWS::Serverless-2016-10-31"
+          assert "ItemsFunction" in data["Resources"]
+          print("Template parses; expected function found.")
+          PY
