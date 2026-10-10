@@ -15,8 +15,27 @@ jobs:
           python -m pip install pyyaml
           python - <<'PY'
           import yaml
-          with open("template.yaml", encoding="utf-8") as f: data=yaml.safe_load(f)
+
+          class CloudFormationLoader(yaml.SafeLoader):
+              pass
+
+          def cloudformation_tag(loader, tag_suffix, node):
+              if isinstance(node, yaml.ScalarNode):
+                  return loader.construct_scalar(node)
+              if isinstance(node, yaml.SequenceNode):
+                  return loader.construct_sequence(node)
+              if isinstance(node, yaml.MappingNode):
+                  return loader.construct_mapping(node)
+              return None
+
+          CloudFormationLoader.add_multi_constructor("!", cloudformation_tag)
+
+          with open("template.yaml", encoding="utf-8") as f:
+              data = yaml.load(f, Loader=CloudFormationLoader)
+
           assert data["Transform"] == "AWS::Serverless-2016-10-31"
           assert "ItemsFunction" in data["Resources"]
           print("Template parses; expected function found.")
           PY
+
+
