@@ -39,7 +39,7 @@ Resources:
         ListItems: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /items, Method: GET}}
         CreateItem: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /items, Method: POST}}
         GetItem: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: '/items/{item_id}', Method: GET}}
-        UpdateItem: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /items/{item_id}, Method: PATCH}}
+        UpdateItem: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: '/items/{item_id}', Method: PATCH}}
         PresignUpload: {Type: HttpApi, Properties: {ApiId: !Ref ItemsApi, Path: /uploads/presign, Method: POST}}
   ItemsTable:
     Type: AWS::DynamoDB::Table
