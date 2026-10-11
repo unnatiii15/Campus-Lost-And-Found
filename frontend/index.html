@@ -1,14 +1,118 @@
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campus Lost & Found</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="logo">LF</div>
+  <div>
+    <b>Campus Lost & Found</b>
+    <small>One place to reconnect belongings with their owners</small>
+  </div>
+  <span class="pill">AWS CONNECTED</span>
+</header>
 
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Campus Lost & Found</title><link rel="stylesheet" href="styles.css"></head><body>
-<header><div class="logo">LF</div><div><b>Campus Lost & Found</b><small>One place to reconnect belongings with their owners</small></div><span class="pill">LOCAL DEMO</span></header>
-<main><section class="hero"><p class="eyebrow">CAMPUS COMMUNITY PORTAL</p><h1>Lost something?<br><span>Let's find its way home.</span></h1><p>Report lost and found belongings, search active records, and keep item status up to date.</p></section>
-<section class="stats"><div><b id="lostCount">0</b><small>Lost reports</small></div><div><b id="foundCount">0</b><small>Found reports</small></div><div><b id="returnedCount">0</b><small>Returned</small></div></section>
-<div class="layout"><section class="panel"><p class="eyebrow">MAKE A REPORT</p><h2>Add an item</h2><form id="itemForm">
-<label>Report type<select id="type"><option>LOST</option><option>FOUND</option></select></label>
-<div class="two"><label>Item name<input id="name" required maxlength="80" placeholder="Black wallet"></label><label>Category<select id="category"><option>Accessories</option><option>Electronics</option><option>Books & stationery</option><option>Bags</option><option>Clothing</option><option>Keys & cards</option><option>Other</option></select></label></div>
-<label>Description<textarea id="description" required maxlength="500" rows="3" placeholder="Colour, brand, distinguishing details"></textarea></label>
-<div class="two"><label>Location<input id="location" required maxlength="120" placeholder="Library, second floor"></label><label>Date<input id="date" type="date" required></label></div>
-<label>Photo (optional)<input id="photo" type="file" accept="image/png,image/jpeg,image/webp"></label><small class="hint">Local demo: use an image smaller than 1 MB. It stays in this browser.</small><button class="primary">Save report →</button><p id="message" role="status"></p></form></section>
-<section class="panel"><div class="heading"><div><p class="eyebrow">ACTIVE RECORDS</p><h2>Browse reports</h2></div><small id="count">0 items</small></div><div class="filters"><input id="search" type="search" placeholder="Search name, description, location"><select id="filter"><option value="ALL">All active</option><option>LOST</option><option>FOUND</option></select></div><div id="records"></div><div id="empty" class="empty"><b>No matching reports</b><p>Try a different search or add the first report.</p></div></section></div>
-<aside><b>Prototype note</b> — This is the local demo version. Data is saved in this browser. The planned AWS version uses API Gateway, Lambda, DynamoDB and private S3 storage, with authentication and access controls before public deployment.</aside><footer>Cloud Computing PBL · Campus Lost-and-Found Portal <button id="reset">Reset demo data</button></footer></main>
-<dialog id="dialog"><button id="close" class="close">×</button><div id="detail"></div></dialog><script src="app.js"></script></body></html>
+<main>
+  <section class="hero">
+    <p class="eyebrow">CAMPUS COMMUNITY PORTAL</p>
+    <h1>Lost something?<br><span>Let's find its way home.</span></h1>
+    <p>Report lost and found belongings, search active records, and keep item status up to date.</p>
+  </section>
+
+  <section class="stats">
+    <div><b id="lostCount">0</b><small>Lost reports</small></div>
+    <div><b id="foundCount">0</b><small>Found reports</small></div>
+    <div><b id="returnedCount">0</b><small>Returned</small></div>
+  </section>
+
+  <div class="layout">
+    <section class="panel">
+      <p class="eyebrow">MAKE A REPORT</p>
+      <h2>Add an item</h2>
+      <form id="itemForm">
+        <label>Report type
+          <select id="type">
+            <option>LOST</option>
+            <option>FOUND</option>
+          </select>
+        </label>
+        <div class="two">
+          <label>Item name
+            <input id="name" required maxlength="80" placeholder="Black wallet">
+          </label>
+          <label>Category
+            <select id="category">
+              <option>Accessories</option>
+              <option>Electronics</option>
+              <option>Books & stationery</option>
+              <option>Bags</option>
+              <option>Clothing</option>
+              <option>Keys & cards</option>
+              <option>Other</option>
+            </select>
+          </label>
+        </div>
+        <label>Description
+          <textarea id="description" required maxlength="500" rows="3" placeholder="Colour, brand, distinguishing details"></textarea>
+        </label>
+        <div class="two">
+          <label>Location
+            <input id="location" required maxlength="120" placeholder="Library, second floor">
+          </label>
+          <label>Date
+            <input id="date" type="date" required>
+          </label>
+        </div>
+        <label>Photo (optional)
+          <input id="photo" type="file" accept="image/png,image/jpeg,image/webp">
+        </label>
+        <small class="hint">AWS-backed records. Photo upload requires storage integration.</small>
+        <button class="primary" type="submit">Save report →</button>
+        <p id="message" role="status"></p>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="heading">
+        <div>
+          <p class="eyebrow">ACTIVE RECORDS</p>
+          <h2>Browse reports</h2>
+        </div>
+        <small id="count">0 items</small>
+      </div>
+      <div class="filters">
+        <input id="search" type="search" placeholder="Search name, description, location">
+        <select id="filter">
+          <option value="ALL">All active</option>
+          <option>LOST</option>
+          <option>FOUND</option>
+        </select>
+      </div>
+      <div id="records"></div>
+      <div id="empty" class="empty">
+        <b>No matching reports</b>
+        <p>Try a different search or add the first report.</p>
+      </div>
+    </section>
+  </div>
+
+  <aside>
+    <b>Cloud architecture</b> — The application uses GitHub Pages for the frontend and AWS API Gateway and Lambda for API requests, with DynamoDB as the intended record store. Authentication and access controls must be added before public production use.
+  </aside>
+
+  <footer>Cloud Computing PBL · Campus Lost-and-Found Portal</footer>
+</main>
+
+<dialog id="dialog">
+  <button id="close" class="close">×</button>
+  <div id="detail"></div>
+</dialog>
+<script src="app.js"></script>
+</body>
+</html>
+```
