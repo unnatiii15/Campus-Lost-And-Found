@@ -1,37 +1,194 @@
-const $=id=>document.getElementById(id), KEY="campus-lf-demo-v1";
-let items=[];try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch{}
-$("date").value=new Date().toISOString().slice(0,10);
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const save=()=>localStorage.setItem(KEY,JSON.stringify(items));
-const dateFmt=s=>s?new Date(s+"T00:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}):"—";
-function render(){
-$("lostCount").textContent=items.filter(x=>x.type==="LOST"&&x.status!=="RETURNED").length;
-$("foundCount").textContent=items.filter(x=>x.type==="FOUND"&&x.status!=="RETURNED").length;
-$("returnedCount").textContent=items.filter(x=>x.status==="RETURNED").length;
-let q=$("search").value.toLowerCase().trim(),t=$("filter").value;
-let rows=items.filter(x=>x.status!=="RETURNED"&&(t==="ALL"||x.type===t)&&[x.name,x.description,x.location,x.category].some(v=>v.toLowerCase().includes(q)));
-$("count").textContent=rows.length+" item"+(rows.length===1?"":"s");
-$("records").innerHTML=rows.map(x=>`<article class="item" tabindex="0" data-id="${esc(x.id)}"><div class="photo">${x.photo?`<img src="${x.photo}" alt="">`:"⌕"}</div><div><b>${esc(x.name)}</b><span class="badge ${x.type}">${esc(x.status)}</span><div class="meta">⌖ ${esc(x.location)} · ${esc(dateFmt(x.date))}</div><div class="desc">${esc(x.description)}</div></div></article>`).join("");
-$("empty").hidden=rows.length>0;
-document.querySelectorAll(".item").forEach(el=>{const open=()=>details(el.dataset.id);el.onclick=open;el.onkeydown=e=>{if(e.key==="Enter")open()}});
+
+const API_URL =
+  "https://nx4myenwb6.execute-api.ap-southeast-2.amazonaws.com/prod/items";
+
+const form = document.getElementById("itemForm");
+const message = document.getElementById("message");
+const records = document.getElementById("records");
+const empty = document.getElementById("empty");
+const search = document.getElementById("search");
+const filter = document.getElementById("filter");
+
+let items = [];
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
 }
-function details(id){
-let x=items.find(i=>i.id===id);if(!x)return;
-$("detail").innerHTML=`<p class="eyebrow">ITEM REPORT</p><h2>${esc(x.name)} <span class="badge ${x.status}">${esc(x.status)}</span></h2>${x.photo?`<img src="${x.photo}" alt="Item photo">`:""}<p>${esc(x.description)}</p><p><b>Category:</b> ${esc(x.category)}<br><b>Location:</b> ${esc(x.location)}<br><b>Date:</b> ${esc(dateFmt(x.date))}</p><button class="action" id="returned">${x.status==="RETURNED"?"Reopen report":"Mark returned"}</button><button class="action" id="delete">Delete demo record</button>`;
-$("dialog").showModal();
-$("returned").onclick=()=>{x.status=x.status==="RETURNED"?x.type:"RETURNED";x.updatedAt=new Date().toISOString();save();$("dialog").close();render()};
-$("delete").onclick=()=>{if(confirm("Delete this local demo record?")){items=items.filter(i=>i.id!==id);save();$("dialog").close();render()}};
+
+function showMessage(text, isError = false) {
+  if (!message) return;
+  message.textContent = text;
+  message.style.color = isError ? "#dc2626" : "#15803d";
 }
-$("itemForm").onsubmit=async e=>{
-e.preventDefault();let f=$("photo").files[0];
-if(f&&!["image/jpeg","image/png","image/webp"].includes(f.type))return $("message").textContent="Choose a JPG, PNG or WebP image.";
-if(f&&f.size>1024*1024)return $("message").textContent="Choose an image smaller than 1 MB for this demo.";
-let photo="";if(f)photo=await new Promise((ok,no)=>{let r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});
-let type=$("type").value;
-items.unshift({id:crypto.randomUUID?crypto.randomUUID():"item-"+Date.now(),type,status:type,name:$("name").value.trim(),category:$("category").value,description:$("description").value.trim(),location:$("location").value.trim(),date:$("date").value,photo,createdAt:new Date().toISOString()});
-try{save();$("message").textContent="Saved in this browser demo.";e.target.reset();$("date").value=new Date().toISOString().slice(0,10);render()}catch(err){items.shift();$("message").textContent="Browser storage full; remove records or use a smaller photo."}
-};
-$("search").oninput=render;$("filter").onchange=render;
-$("reset").onclick=()=>{if(confirm("Clear all local demo records?")){items=[];save();render();$("message").textContent="Demo data cleared."}};
-$("close").onclick=()=>$("dialog").close();$("dialog").onclick=e=>{if(e.target===$("dialog"))$("dialog").close()};
-render();
+
+async function loadItems() {
+  try {
+    const response = await fetch(API_URL);
+
+    if (!response.ok) {
+      throw new Error("AWS returned status " + response.status);
+    }
+
+    const data = await response.json();
+    items = Array.isArray(data)
+      ? data
+      : typeof data.body === "string"
+        ? JSON.parse(data.body)
+        : data.body || [];
+
+    renderItems();
+  } catch (error) {
+    console.error("Loading items failed:", error);
+    showMessage(
+      "Could not load items from AWS. Please refresh and try again.",
+      true
+    );
+  }
+}
+
+function renderItems() {
+  const query = (search?.value || "").trim().toLowerCase();
+  const selectedStatus = (filter?.value || "ALL").toUpperCase();
+
+  const visibleItems = items.filter((item) => {
+    const searchableText = [
+      item.title,
+      item.description,
+      item.location,
+      item.status
+    ].join(" ").toLowerCase();
+
+    const matchesSearch = searchableText.includes(query);
+    const matchesStatus =
+      selectedStatus === "ALL" ||
+      selectedStatus === item.status;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  if (records) {
+    records.innerHTML = visibleItems.map((item) => {
+      const status = String(item.status || "LOST").toUpperCase();
+
+      return `
+        <article class="item-card">
+          <span class="item-status">${escapeHTML(status)}</span>
+          <h3>${escapeHTML(item.title || "Untitled item")}</h3>
+          <p>${escapeHTML(item.description || "No description provided.")}</p>
+          <p><strong>Location:</strong> ${escapeHTML(item.location || "Not specified")}</p>
+          <p class="item-date">
+            Reported: ${escapeHTML(
+              item.created_at
+                ? new Date(item.created_at).toLocaleString()
+                : "Date unavailable"
+            )}
+          </p>
+        </article>
+      `;
+    }).join("");
+  }
+
+  if (empty) {
+    empty.hidden = visibleItems.length > 0;
+  }
+
+  const lost = items.filter(
+    item => String(item.status).toUpperCase() === "LOST"
+  ).length;
+
+  const found = items.filter(
+    item => String(item.status).toUpperCase() === "FOUND"
+  ).length;
+
+  const lostCount = document.getElementById("lostCount");
+  const foundCount = document.getElementById("foundCount");
+  const returnedCount = document.getElementById("returnedCount");
+  const count = document.getElementById("count");
+
+  if (lostCount) lostCount.textContent = lost;
+  if (foundCount) foundCount.textContent = found;
+  if (returnedCount) returnedCount.textContent = 0;
+  if (count) count.textContent = visibleItems.length;
+}
+
+if (form) {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const title = document.getElementById("name")?.value.trim();
+    const status = document.getElementById("type")?.value.toUpperCase();
+    const description =
+      document.getElementById("description")?.value.trim() || "";
+    const location =
+      document.getElementById("location")?.value.trim() || "";
+
+    if (!title) {
+      showMessage("Please enter the item name.", true);
+      return;
+    }
+
+    if (!["LOST", "FOUND"].includes(status)) {
+      showMessage("Please select Lost or Found.", true);
+      return;
+    }
+
+    const submitButton = form.querySelector(
+      'button[type="submit"], input[type="submit"]'
+    );
+
+    if (submitButton) submitButton.disabled = true;
+    showMessage("Submitting report to AWS...");
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          location,
+          status
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Request failed");
+      }
+
+      form.reset();
+      showMessage("Report saved successfully in AWS!");
+      await loadItems();
+    } catch (error) {
+      console.error("Submitting report failed:", error);
+      showMessage(
+        "Could not submit the report. Check the API and try again.",
+        true
+      );
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+}
+
+if (search) search.addEventListener("input", renderItems);
+if (filter) filter.addEventListener("change", renderItems);
+
+const closeButton = document.getElementById("close");
+if (closeButton) {
+  closeButton.addEventListener("click", () => {
+    const dialog = document.getElementById("dialog");
+    if (dialog?.close) dialog.close();
+  });
+}
+
+loadItems();
