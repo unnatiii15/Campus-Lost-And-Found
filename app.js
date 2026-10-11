@@ -73,7 +73,8 @@ async function loadItems() {
             throw new Error("AWS returned status " + response.status);
         }
 
-        const data = await response.json();
+        const data = await response.json()
+
         items = Array.isArray(data)
             ? data
             : Array.isArray(data.body)
