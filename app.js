@@ -225,10 +225,9 @@ if (form) {
                     description,
                     location,
                     category,
-                    status,
                     date,
-                    photo: photo ? photo.data : null,
-                    photoType: photo ? photo.type : null
+                    status,
+                    photo
                 })
             });
 
