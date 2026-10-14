@@ -778,8 +778,11 @@ function renderItems() {
     const visibleItems = items.filter((item) => {
         const status = String(item.status || "LOST").toUpperCase();
 
+        // "All active" = LOST and FOUND only. RETURNED shows only under its own filter.
         const matchesStatus =
-            selectedFilter === "ALL" || status === selectedFilter;
+            selectedFilter === "ALL"
+                ? (status === "LOST" || status === "FOUND")
+                : status === selectedFilter;
 
         const searchableText = [
             item.title,
@@ -820,6 +823,7 @@ function renderItems() {
         const location = escapeHTML(item.location || "Not specified");
         const category = escapeHTML(item.category || "Other");
         const reported = escapeHTML(formatDate(item.created_at));
+        const canReturn = Boolean(item.item_id) && (status === "LOST" || status === "FOUND");
 
         return `
             <article class="item-card">
@@ -830,6 +834,9 @@ function renderItems() {
                 <p><strong>Category:</strong> ${category}</p>
                 <p><strong>Location:</strong> ${location}</p>
                 ${reported ? `<p class="item-date">Reported: ${reported}</p>` : ""}
+                ${canReturn
+                    ? `<button type="button" class="btn-return" data-return="${escapeHTML(item.item_id)}">Mark as Returned</button>`
+                    : ""}
             </article>
         `;
     }).join("");
@@ -838,6 +845,77 @@ function renderItems() {
         empty.style.display = visibleItems.length ? "none" : "block";
     }
 }
+
+// ---------------------------------------------------------------------------
+//  MARK AS RETURNED  (PUT /items  {item_id, status:"RETURNED"})
+//  The record stays in DynamoDB; only its status changes.
+// ---------------------------------------------------------------------------
+const returningIds = new Set();   // blocks double-clicks while a request is in flight
+
+async function markAsReturned(itemId, button) {
+    if (!itemId || returningIds.has(itemId)) return;
+
+    const item = items.find((i) => i.item_id === itemId);
+    const name = item?.title ? `"${item.title}"` : "this report";
+    if (!window.confirm(`Mark ${name} as returned?\n\nIt will move to the RETURNED filter and stop appearing in potential matches.`)) {
+        return;
+    }
+
+    returningIds.add(itemId);
+    if (button) { button.disabled = true; button.textContent = "Updating..."; }
+    showMessage("Updating report in AWS...");
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ item_id: itemId, status: "RETURNED" })
+        });
+
+        let result = {};
+        try { result = await response.json(); } catch (e) { /* empty or non-JSON body */ }
+
+        if (!response.ok) {
+            throw new Error(result.error || result.message || "Update failed (HTTP " + response.status + ")");
+        }
+
+        showMessage("Report marked as returned.");
+        await loadItems();        // refresh from AWS (also re-runs matching)
+    } catch (error) {
+        console.error("Marking as returned failed:", error);
+        const blocked = error instanceof TypeError;   // network / CORS preflight failure
+        showMessage(
+            blocked
+                ? "Could not reach AWS for the update. The API's OPTIONS (CORS) response probably does not allow PUT yet."
+                : (error.message || "Could not mark the report as returned."),
+            true
+        );
+        if (button) { button.disabled = false; button.textContent = "Mark as Returned"; }
+    } finally {
+        returningIds.delete(itemId);
+    }
+}
+
+if (records) {
+    records.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-return]");
+        if (button) markAsReturned(button.dataset.return, button);
+    });
+}
+
+// Styles for the new button / RETURNED badge, injected here so styles.css needs no change.
+// :where() gives the badge rule zero specificity, so any existing styles.css rule still wins.
+(function addReturnStyles() {
+    const style = document.createElement("style");
+    style.textContent = `
+        .btn-return { margin-top: 10px; padding: 8px 14px; border: 1px solid #15803d; border-radius: 8px;
+                      background: #fff; color: #15803d; font: inherit; font-weight: 600; cursor: pointer; }
+        .btn-return:hover:not(:disabled) { background: #15803d; color: #fff; }
+        .btn-return:disabled { opacity: .6; cursor: wait; }
+        :where(.item-status.returned) { background: #e5e7eb; color: #374151; }
+    `;
+    document.head.appendChild(style);
+})();
 
 // ---------------------------------------------------------------------------
 //  FORM SUBMIT
