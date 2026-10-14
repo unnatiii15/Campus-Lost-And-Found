@@ -122,7 +122,9 @@ document.addEventListener("error", (event) => {
 }, true);
 
 function photoMarkup(item, extraClass = "") {
-    const url = typeof item.photo_url === "string" ? item.photo_url : "";
+    const rawUrl = typeof item.photo_url === "string" ? item.photo_url : "";
+    const url = rawUrl.match(/https?:\/\/[^\s)\]]+/)?.[0] || "";
+
     if (!url) {
         return `<div class="photo-missing ${extraClass}">No photo</div>`;
     }
