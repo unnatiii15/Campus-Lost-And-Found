@@ -10,7 +10,7 @@ A cloud-based Lost-and-Found web application designed to help students report, s
 
 Watch the complete demonstration of the application, including report creation, image uploads, searching, matching, and updating an item's status.
 
-**Demo Video:** [Watch the Campus Lost-and-Found Demo](PASTE_YOUR_DEMO_VIDEO_LINK_HERE)
+**Demo Video:** [▶ Watch the Campus Lost-and-Found Demo](https://github.com/unnatiii15/Campus-Lost-And-Found/blob/main/lost-found%20demo.mp4)
 
 > Replace the link above with the direct GitHub URL of your uploaded 43 MB video.
 
