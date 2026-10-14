@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -75,7 +74,7 @@
         <label>Photo (optional)
           <input id="photo" type="file" accept="image/png,image/jpeg,image/webp">
         </label>
-        <small class="hint">Photo upload requires storage integration.</small>
+        <small class="hint">JPEG, PNG or WebP, up to 5 MB. Stored privately in the cloud.</small>
         <button class="primary" type="submit">Save report →</button>
         <p id="message" role="status"></p>
       </form>
@@ -107,8 +106,20 @@
     </section>
   </div>
 
+  <section class="panel matches-panel" id="matchesSection">
+    <p class="eyebrow">AUTOMATIC MATCHING</p>
+    <h2>Potential matches</h2>
+    <p class="matches-intro">Each LOST report is compared with each FOUND report using category, item name,
+      description, location and date. Higher scores mean more signals agree.</p>
+    <div id="matches"></div>
+    <div id="noMatches" class="empty">
+      <b>No matches yet</b>
+      <p>Matches appear once there is at least one LOST and one FOUND report.</p>
+    </div>
+  </section>
+
   <aside>
-    <b>Cloud architecture</b> — GitHub Pages hosts the frontend. AWS API Gateway and Lambda handle API requests, with DynamoDB intended for record storage. Authentication and access controls must be configured before public production use.
+    <b>Cloud architecture</b> — GitHub Pages hosts the frontend. AWS API Gateway and Lambda handle API requests, with DynamoDB for report records and a private S3 bucket for photos (shown through short-lived secure links). Authentication and access controls must be configured before public production use.
   </aside>
 
   <footer>Cloud Computing PBL · Campus Lost-and-Found Portal</footer>
@@ -122,4 +133,3 @@
 <script src="app.js"></script>
 </body>
 </html>
-```
